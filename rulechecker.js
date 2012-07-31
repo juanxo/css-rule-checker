@@ -10,7 +10,7 @@
         var selectorText = currentRule.selectorText;
         console.info(selectorText);
         var matchedElements = $(selectorText);
-        if ( matchedElements.length() > 0 ){
+        if ( matchedElements.length > 0 ){
           console.info(selectorText + " applies to " + matchedElements.length() + "elements");
         } else {
           console.warn(selectorText + " doesn't apply");
