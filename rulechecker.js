@@ -10,6 +10,7 @@
         var selectorText = currentRule.selectorText;
         console.info(selectorText);
         var matchedElements = $(selectorText);
+        console.info(matchedElements.toString());
         if ( matchedElements.length > 0 ){
           console.info(selectorText + " applies to " + matchedElements.length() + "elements");
         } else {
