@@ -23,8 +23,10 @@
       } 
     }
     
-    console.info("There are " + totalRuleCount + " rules");
-    console.info("Applied: " + totalAppliedRuleCount + ", Not applied: " + totalRuleCount - totalAppliedRuleCount);
     
   }
+  console.info("There are " + totalRuleCount + " rules");
+  var notAppliedRuleCount = totalRuleCount - totalAppliedRuleCount;
+  console.info("Applied: " + totalAppliedRuleCount + ", Not applied: " + notAppliedRuleCount);
+    
 })();
