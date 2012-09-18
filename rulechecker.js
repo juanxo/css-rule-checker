@@ -1,9 +1,11 @@
 (function(){
-  if (!($ = window.jQuery)) { 
+  // Load jQuery if it hasn't be previously loaded
+  if (!window.jQuery) { 
     script = document.createElement( 'script' );  
     script.src = 'http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js';   
     script.onload=checkRules;  
-    document.body.appendChild(script);  
+    document.body.appendChild(script); 
+    jQuery.noConflict();
   }   
   else {  
       checkRules();  
@@ -22,7 +24,7 @@
           totalRuleCount += 1;
           var currentRule = rules[j];
           var selectorText = currentRule.selectorText;
-          var matchedElements = $(selectorText);
+          var matchedElements = jQuery(selectorText);
           
           if ( matchedElements.length > 0 ){
             totalAppliedRuleCount += 1;
