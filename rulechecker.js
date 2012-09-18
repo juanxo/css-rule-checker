@@ -15,7 +15,8 @@
     var stylesheets = document.styleSheets;  
     var totalRuleCount = 0;
     var totalAppliedRuleCount = 0;
-    for ( var index = 0; index < stylesheets.length; ++index ){
+    
+    for ( var index = 0; stylesheets && index < stylesheets.length; ++index ){
       var currentStylesheet = stylesheets[index];
       if ( currentStylesheet != null){
         var stylesheetName = "Inline Style";
@@ -24,7 +25,7 @@
         }
         console.info("Stylesheet " + index + ": " + stylesheetName);
         var rules = currentStylesheet.rules;
-        for ( var j = 0; j < rules.length; ++j ){
+        for ( var j = 0; rules && j < rules.length; ++j ){
           var currentRule = rules[j];
           if ( currentRule instanceof CSSImportRule ) {
             var result = checkImportRule(currentRule);
@@ -59,7 +60,7 @@
     var stylesheet = importRule.styleSheet;
     var appliedRulesCount = 0;
     var totalRulesCount = 0;
-    for ( var i = 0; i < stylesheet.rules.length; ++i ) {
+    for ( var i = 0; stylesheet.rules && i < stylesheet.rules.length; ++i ) {
       var currentRule = stylesheet.rules[i];
       if ( currentRule instanceof CSSImportRule ) {
         var results = checkImportRule(currentRule);
