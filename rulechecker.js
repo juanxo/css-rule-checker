@@ -25,16 +25,24 @@
         console.info("Stylesheet " + index + ": " + stylesheetName);
         var rules = currentStylesheet.rules;
         for ( var j = 0; j < rules.length; ++j ){
-          totalRuleCount += 1;
           var currentRule = rules[j];
-          var selectorText = currentRule.selectorText;
-          var matchedElements = jQuery(selectorText);
-          
-          if ( matchedElements.length > 0 ){
-            totalAppliedRuleCount += 1;
-            console.info(selectorText + " applies to " + matchedElements.length + "elements");
+          if ( currentRule instanceof CSSImportRule ) {
+            var result = checkImportRule(currentRule);
+            totalAppliedRuleCount += result[0]; 
+            totalRuleCount += result[1];
+            
           } else {
-            console.warn(selectorText + " doesn't apply");
+            totalRuleCount += 1;
+            
+            var selectorText = currentRule.selectorText;
+            var matchedElements = jQuery(selectorText);
+            
+            if ( matchedElements.length > 0 ){
+              totalAppliedRuleCount += 1;
+              console.info(selectorText + " applies to " + matchedElements.length + " elements");
+            } else {
+              console.warn(selectorText + " doesn't apply");
+            }
           }
         } 
       }
@@ -44,5 +52,33 @@
     console.info("There are " + totalRuleCount + " rules");
     var notAppliedRuleCount = totalRuleCount - totalAppliedRuleCount;
     console.info("Applied: " + totalAppliedRuleCount + ", Not applied: " + notAppliedRuleCount);
-  }    
+  }
+  
+  // Iterates over import rule, returning [appliedRuleCount, totalRuleCount] for that import.
+  function checkImportRule( importRule ) {
+    var stylesheet = importRule.styleSheet;
+    var appliedRulesCount = 0;
+    var totalRulesCount = 0;
+    for ( var i = 0; i < stylesheet.rules.length; ++i ) {
+      var currentRule = sytlesheet.rules[i];
+      if ( currentRule instanceof CSSImportRule ) {
+        var results = checkImportRule(currentRule);
+        appliedRulesCount += results[0];
+        totalRulesCount += results[1];
+      } else {
+        totalRulesCount += 1;
+        var selectorText = currentRule.selectorText;
+        var matchedElements = jQuery(selectorText);
+        
+        if ( matchedElements.length > 0 ){
+          appliedRulesCount += 1;
+          console.info(selectorText + " applies to " + matchedElements.length + " elements");
+        } else {
+          console.warn(selectorText + " doesn't apply");
+        }
+      }
+    }
+    
+    return [appliedRulesCount, totalRulesCount];
+  }
 })();
