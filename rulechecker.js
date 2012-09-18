@@ -60,7 +60,7 @@
     var appliedRulesCount = 0;
     var totalRulesCount = 0;
     for ( var i = 0; i < stylesheet.rules.length; ++i ) {
-      var currentRule = sytlesheet.rules[i];
+      var currentRule = stylesheet.rules[i];
       if ( currentRule instanceof CSSImportRule ) {
         var results = checkImportRule(currentRule);
         appliedRulesCount += results[0];
