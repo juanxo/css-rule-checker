@@ -15,7 +15,7 @@
     var stylesheets = document.styleSheets;  
     var totalRuleCount = 0;
     var totalAppliedRuleCount = 0;
-    for ( index in stylesheets){
+    for ( var index = 0; index < stylesheets.length; ++index ){
       var currentStylesheet = stylesheets[index];
       if ( currentStylesheet != null){
         var stylesheetName = "Inline Style";
@@ -24,7 +24,7 @@
         }
         console.info("Stylesheet " + index + ": " + stylesheetName);
         var rules = currentStylesheet.rules;
-        for ( j in rules){
+        for ( var j = 0; j < rules.length; ++j ){
           totalRuleCount += 1;
           var currentRule = rules[j];
           var selectorText = currentRule.selectorText;
