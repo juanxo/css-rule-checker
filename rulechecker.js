@@ -18,7 +18,11 @@
     for ( index in stylesheets){
       var currentStylesheet = stylesheets[index];
       if ( currentStylesheet != null){
-        console.info("Stylesheet " + index + ": " + currentStylesheet.href);
+        var stylesheetName = "Inline Style";
+        if (currentStylesheet.ownerNode.tagName.toLowerCase() === "link") {
+          stylesheetName = currentStylesheet.href;
+        }
+        console.info("Stylesheet " + index + ": " + stylesheetName);
         var rules = currentStylesheet.rules;
         for ( j in rules){
           totalRuleCount += 1;
