@@ -110,11 +110,11 @@
     return [appliedRulesCount, totalRulesCount];
   }
   
-  var notEmpty = function(element) {
+  function notEmpty(element) {
     return element !== '';
   }
   
-  var getStatistics = function(collection) {
+  function getStatistics(collection) {
     var median, mid, average;
     
     if (collection.length > 0) {
