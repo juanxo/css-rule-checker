@@ -52,7 +52,7 @@
               var selectorsInRule = selectorText.split(',');
               selectorsPerRule.push(selectorsInRule.length);
               var cssRegex = /\s+|\s*?[>+]\s*?|\[\:/;
-              for (index in selectorsInRule) {
+              for (var index in selectorsInRule) {
                 // Remove first '.' cause it made difficult to parse rules right
                 var selectorParts = selectorsInRule[index].split('.').filter(notEmpty).join(' ').split(cssRegex);
                 partsPerRule.push(selectorParts.length);
@@ -102,7 +102,7 @@
           var selectorsInRule = selectorText.split(',');
           selectorsPerRule.push(selectorsInRule.length);
           var cssRegex = /\s+|\s*?[>+]\s*?|\[\:/;
-          for (index in selectorsInRule) {
+          for (var index in selectorsInRule) {
             // Remove first '.' cause it made difficult to parse rules right
             var selectorParts = selectorsInRule[index].split('.').filter(notEmpty).join(' ').split(cssRegex);
             partsPerRule.push(selectorParts.length);
