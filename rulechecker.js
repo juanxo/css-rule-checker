@@ -48,13 +48,15 @@
             }
             
             // Analyze rule composition
-            var selectorsInRule = selectorText.split(',');
-            selectorsPerRule.push(selectorsInRule.length);
-            var cssRegex = /\s+|\s*?[>+]\s*?|\[\:/;
-            for (index in selectorsInRule) {
-              // Remove first '.' cause it made difficult to parse rules right
-              var selectorParts = selectorsInRule[index].split('.').filter(notEmpty).join(' ').split(cssRegex);
-              partsPerRule.push(selectorParts.length);
+            if (selectorText != void 0 && selectorText != null) {
+              var selectorsInRule = selectorText.split(',');
+              selectorsPerRule.push(selectorsInRule.length);
+              var cssRegex = /\s+|\s*?[>+]\s*?|\[\:/;
+              for (index in selectorsInRule) {
+                // Remove first '.' cause it made difficult to parse rules right
+                var selectorParts = selectorsInRule[index].split('.').filter(notEmpty).join(' ').split(cssRegex);
+                partsPerRule.push(selectorParts.length);
+              }
             }
             
           }
@@ -96,13 +98,15 @@
         }
         
         // Analyze rule composition
-        var selectorsInRule = selectorText.split(',');
-        selectorsPerRule.push(selectorsInRule.length);
-        var cssRegex = /\s+|\s*?[>+]\s*?|\[\:/;
-        for (index in selectorsInRule) {
-          // Remove first '.' cause it made difficult to parse rules right
-          var selectorParts = selectorsInRule[index].split('.').filter(notEmpty).join(' ').split(cssRegex);
-          partsPerRule.push(selectorParts.length);
+        if (selectorText != void 0 && selectorText != null) {
+          var selectorsInRule = selectorText.split(',');
+          selectorsPerRule.push(selectorsInRule.length);
+          var cssRegex = /\s+|\s*?[>+]\s*?|\[\:/;
+          for (index in selectorsInRule) {
+            // Remove first '.' cause it made difficult to parse rules right
+            var selectorParts = selectorsInRule[index].split('.').filter(notEmpty).join(' ').split(cssRegex);
+            partsPerRule.push(selectorParts.length);
+          }
         }
       }
     }
