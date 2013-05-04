@@ -15,7 +15,7 @@
     var stylesheets = document.styleSheets;  
     var totalRuleCount = 0;
     var totalAppliedRuleCount = 0;
-    var partsPerRule = [];
+    var partsPerSelector = [];
     var selectorsPerRule = [];
     
     for ( var index = 0; stylesheets && index < stylesheets.length; ++index ){
@@ -52,10 +52,10 @@
               var selectorsInRule = selectorText.split(',');
               selectorsPerRule.push(selectorsInRule.length);
               var cssRegex = /\s+|\s*?[>+]\s*?|\[\:/;
-              for (var index in selectorsInRule) {
+              for (var i in selectorsInRule) {
                 // Remove first '.' cause it made difficult to parse rules right
-                var selectorParts = selectorsInRule[index].split('.').filter(notEmpty).join(' ').split(cssRegex);
-                partsPerRule.push(selectorParts.length);
+                var selectorParts = selectorsInRule[i].split('.').filter(notEmpty).join(' ').split(cssRegex);
+                partsPerSelector.push(selectorParts.length);
               }
             }
             
@@ -135,6 +135,8 @@
       for (index in collection) {
         average += collection[index];
       }
+      
+      average /= collection.length;
       
       console.log("SelectorsPerRule: Median", median, "Average", average);
     }
