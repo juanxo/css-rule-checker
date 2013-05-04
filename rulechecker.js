@@ -15,6 +15,8 @@
     var stylesheets = document.styleSheets;  
     var totalRuleCount = 0;
     var totalAppliedRuleCount = 0;
+    var partsPerRule = [];
+    var selectorsPerRule = [];
     
     for ( var index = 0; stylesheets && index < stylesheets.length; ++index ){
       var currentStylesheet = stylesheets[index];
@@ -44,6 +46,17 @@
             } else {
               console.warn(selectorText + " doesn't apply");
             }
+            
+            // Analyze rule composition
+            var selectorsInRule = selectorText.split(',');
+            selectorsPerRule.push(selectorsInRule.length);
+            var cssRegex = /\s+|\s*?[>+]\s*?|\[\:/;
+            for (index in selectorsInRule) {
+              // Remove first '.' cause it made difficult to parse rules right
+              var selectorParts = selectorsInRule[index].split('.').filter(notEmpty).join(' ').split(cssRegex);
+              partsPerRule.push(selectorParts.length);
+            }
+            
           }
         } 
       }
@@ -53,6 +66,10 @@
     console.info("There are " + totalRuleCount + " rules");
     var notAppliedRuleCount = totalRuleCount - totalAppliedRuleCount;
     console.info("Applied: " + totalAppliedRuleCount + ", Not applied: " + notAppliedRuleCount);
+    
+    getStatistics(selectorsPerRule);
+    getStatistics(partsPerSelector);
+    
   }
   
   // Iterates over import rule, returning [appliedRuleCount, totalRuleCount] for that import.
@@ -77,9 +94,45 @@
         } else {
           console.warn(selectorText + " doesn't apply");
         }
+        
+        // Analyze rule composition
+        var selectorsInRule = selectorText.split(',');
+        selectorsPerRule.push(selectorsInRule.length);
+        var cssRegex = /\s+|\s*?[>+]\s*?|\[\:/;
+        for (index in selectorsInRule) {
+          // Remove first '.' cause it made difficult to parse rules right
+          var selectorParts = selectorsInRule[index].split('.').filter(notEmpty).join(' ').split(cssRegex);
+          partsPerRule.push(selectorParts.length);
+        }
       }
     }
     
     return [appliedRulesCount, totalRulesCount];
+  }
+  
+  var notEmpty = function(element) {
+    return element !== '';
+  }
+  
+  var getStatistics = function(collection) {
+    var median, mid, average;
+    
+    if (collection.length > 0) {
+      // Sort first to calculate median
+      collection = collection.sort(function(a,b) { return a <= b; });
+      mid = collection.length / 2;
+      if ((collection.length % 2) === 0) {
+        median = (collection[mid] + collection[mid + 1]) / 2;
+      } else {
+        median = collection[mid + 1];
+      }
+      
+      average = 0;
+      for (index in collection) {
+        average += collection[index];
+      }
+      
+      console.log("SelectorsPerRule: Median", median, "Average", average);
+    }
   }
 })();
