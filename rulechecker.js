@@ -88,7 +88,13 @@
         totalCount += 1;
 
         var selectorText = currentRule.selectorText;
-        var matchedElements = jQuery(selectorText);
+        // Remove all pseudo classes, as some sizzle versions
+        // break on them
+        var pseudoRegex = /\:[\w\-]+([.\s>+\[#]*?)/gi;
+        var cleanSelectorText = selectorText.replace(pseudoRegex, function(match, replacement) {
+          return replacement;
+        });
+        var matchedElements = jQuery(cleanSelectorText);
 
         if ( matchedElements.length > 0 ){
           appliedCount += 1;
