@@ -1,17 +1,44 @@
 (function() {
-  // Load jQuery if it hasn't be previously loaded
-  if (!window.jQuery) {
-    script = document.createElement( 'script' );
-    script.src = 'http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js';
-    script.onload=checkRules;
-    document.body.appendChild(script);
-    jQuery.noConflict();
-  }
-  else {
-      checkRules();
+
+  // Global var to allow customization and multiple runs
+  CSSRuleChecker = {};
+
+  // percent is a number between 0 and 1
+  CSSRuleChecker.percentil = function(percent, collection) {
+    var result = null;
+    if (collection.length > 0) {
+      // Sort first to calculate median
+      var sortedCollection = collection.sort(function(a,b) { return a - b; });
+      var point = sortedCollection.length * percent;
+      if ((point % 1) === 0) {
+        // Exact match, so just return this value
+        result = sortedCollection[point];
+      } else {
+        point = Math.floor(point);
+        result = (sortedCollection[point] + sortedCollection[point + 1]) / 2;
+      }
+    }
+    return result;
   }
 
-  function checkRules() {
+  CSSRuleChecker.partial = function(func) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return function() {
+      return func.apply(this, args.concat(Array.prototype.slice.call(arguments)));
+    };
+  }
+
+  var percentil = CSSRuleChecker.percentil;
+  var partial = CSSRuleChecker.partial;
+
+  CSSRuleChecker.statistics = [
+  {name: 'median', func: partial(percentil, 0.5)},
+  {name: '95th percentil', func: partial(percentil, 0.95)},
+  {name: 'average', func: average},
+  {name: 'max', func: max}
+  ];
+
+  CSSRuleChecker.checkRules = function() {
     var stylesheets = document.styleSheets;
     var totalCount = 0;
     var totalAppliedCount = 0;
@@ -39,23 +66,11 @@
     var notAppliedCount = totalCount - totalAppliedCount;
     console.info("Applied: " + totalAppliedCount + ", Not applied: " + notAppliedCount);
 
-    console.log(selectorsPerRule);
-    console.log(partsPerSelector);
-
-    var median = partial(percentil, 0.5);
-    var percentil95 = partial(percentil, 0.95);
-
-    getStatistic("selectorsPerRule median", selectorsPerRule, median);
-    getStatistic("partsPerSelector median", partsPerSelector, median);
-
-    getStatistic("selectorsPerRule 95th", selectorsPerRule, percentil95);
-    getStatistic("partsPerSelector 95th", partsPerSelector, percentil95);
-
-    getStatistic("selectorsPerRule average", selectorsPerRule, average);
-    getStatistic("partsPerSelector average", partsPerSelector, average);
-
-    getStatistic("selectorsPerRule max", selectorsPerRule, max);
-    getStatistic("partsPerSelector max", partsPerSelector, max);
+    for (var index = 0; index < CSSRuleChecker.statistics.length; ++index) {
+      var statistic = CSSRuleChecker.statistics[index];
+      getStatistic("selectorsPerRule " + statistic.name, selectorsPerRule, statistic.func);
+      getStatistic("partsPerSelector " + statistic.name, partsPerSelector, statistic.func);
+    }
 
   }
 
@@ -77,6 +92,12 @@
     var rules = stylesheet.rules;
     for ( var j = 0; rules && j < rules.length; ++j ){
       var currentRule = rules[j];
+
+      // Skip other types of rules like media rules or fontface rules
+      if (!((currentRule instanceof CSSImportRule) || currentRule instanceof CSSStyleRule)) {
+        continue;
+      }
+
       if ( currentRule instanceof CSSImportRule ) {
         var result = checkImportRule(currentRule);
         appliedCount += result.appliedSelectorCount;
@@ -85,22 +106,23 @@
         partsPerSelector.push.apply(partsPerSelector, result.partsPerSelector);
 
       } else {
+
         totalCount += 1;
 
         var selectorText = currentRule.selectorText;
         // Remove all pseudo classes, as some sizzle versions
         // break on them
-        var pseudoRegex = /\:[\w\-]+([.\s>+\[#]*?)/gi;
-        var cleanSelectorText = selectorText.replace(pseudoRegex, function(match, replacement) {
-          return replacement;
+        var pseudoRegex = /([^:])\:[\w\-]+(?:\(.*\))?([.\s>+\[#,]*?)/gi;
+        var cleanSelectorText = selectorText.replace(pseudoRegex, function(match, g1, g2) {
+          return g1 + g2;
         });
         var matchedElements = jQuery(cleanSelectorText);
 
         if ( matchedElements.length > 0 ){
           appliedCount += 1;
-          console.info(selectorText + " applies to " + matchedElements.length + " elements");
+          //console.info(selectorText + " applies to " + matchedElements.length + " elements");
         } else {
-          console.warn(selectorText + " doesn't apply");
+          //console.warn(selectorText + " doesn't apply");
         }
 
         // Analyze rule composition
@@ -114,11 +136,11 @@
           // - attribute selector. e.g: "selector[attr="modifier"]
           // - status selector. e.g: "selector:status"
           var cssRegex = /\s+|\s*?[>+]\s*?|\[|\:/;
-            for (var i in selectorsInRule) {
-              // Remove first '.' cause it made difficult to parse rules right
-              var selectorParts = selectorsInRule[i].split('.').filter(notEmpty).join(' ').split(cssRegex);
-              partsPerSelector.push(selectorParts.length);
-            }
+          for (var i in selectorsInRule) {
+            // Remove first '.' cause it made difficult to parse rules right
+            var selectorParts = selectorsInRule[i].split('.').filter(notEmpty).join(' ').split(cssRegex);
+            partsPerSelector.push(selectorParts.length);
+          }
         }
 
       }
@@ -148,24 +170,6 @@
     console.log(statName, result);
   }
 
-  // percent is a number between 0 and 1
-  function percentil(percent, collection) {
-    var result = null;
-    if (collection.length > 0) {
-      // Sort first to calculate median
-      var sortedCollection = collection.sort(function(a,b) { return a - b; });
-      var point = sortedCollection.length * percent;
-      if ((point % 1) === 0) {
-        // Exact match, so just return this value
-        result = sortedCollection[point];
-      } else {
-        point = Math.floor(point);
-        result = (sortedCollection[point] + sortedCollection[point + 1]) / 2;
-      }
-    }
-    return result;
-  }
-
   function average(collection) {
     var average = 0;
     for (var index in collection) {
@@ -178,14 +182,21 @@
     var max = null;
     if (collection) {
       var sortedCollection = collection.sort(function(a,b) { return b - a; });
-      max = collection[0];    }
+      max = collection[0];
+    }
     return max;
   }
 
-  function partial(func) {
-    var args = Array.prototype.slice.call(arguments, 1);
-    return function() {
-      return func.apply(this, args.concat(Array.prototype.slice.call(arguments)));
-    };
+  // Load jQuery if it hasn't be previously loaded
+  if (!window.jQuery) {
+    script = document.createElement( 'script' );
+    script.src = '//ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js';
+    script.onload=CSSRuleChecker.checkRules;
+    document.body.appendChild(script);
   }
+  else {
+    CSSRuleChecker.checkRules();
+  }
+
+
 })();
