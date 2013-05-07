@@ -1,17 +1,16 @@
 (function(){
 
   // Global var to allow customization and multiple runs
-  CSSRuleChecker = {};
+  CSSRuleChecker = window.CSSRuleChecker || {};
 
   // percent is a number between 0 and 1
   CSSRuleChecker.percentil = function(percent, collection) {
     var result = [];
     // First for selectorsInRule
     // Sort first to calculate median
-    var selectorsInRuleCount = collection.map(function(rule) { return rule.parts.length; });
-    var partsInSelectorCount = collection.reduce(function(previous, current) {
-      var partsCount = current.parts.map(function(part) { return part.count; });
-      previous.push.apply(previous, partsCount);
+    var selectorsInRuleCount = _.map(collection, function(rule) { return rule.parts.length; });
+    var partsInSelectorCount = _.reduce(collection, function(previous, current) {
+      previous.push.apply(previous, _.pluck(current.parts, 'count');
       return previous;
     }, []);
     var sortedCollections = [];
@@ -33,24 +32,30 @@
     return result;
   };
 
-  CSSRuleChecker.partial = function(func) {
-    var args = Array.prototype.slice.call(arguments, 1);
-    return function() {
-      return func.apply(this, args.concat(Array.prototype.slice.call(arguments)));
-    };
-  };
-
   var percentil = CSSRuleChecker.percentil;
-  var partial = CSSRuleChecker.partial;
 
-  CSSRuleChecker.statistics = [
-  {name: 'median', func: partial(percentil, 0.5)},
-  {name: '95th percentil', func: partial(percentil, 0.95)},
-  {name: 'average', func: average},
-  {name: 'max', func: max}
-  ];
+  CSSRuleChecker.checkRules = function(statistics) {
 
-  CSSRuleChecker.checkRules = function() {
+    if (!CSSRuleChecker.defaultStatistics) {
+      CSSRuleChecker.defaultStatistics = [
+      {name: 'median', func: _.partial(percentil, 0.5)},
+      {name: '95th percentil', func: _.partial(percentil, 0.95)},
+      {name: 'average', func: average},
+      {name: 'max', func: max}
+      ];
+    };
+
+    var finalStatistics = CSSRuleChecker.defaultStatistics;
+    var customStatistics = CSSRuleChecker.customStatistics;
+    if (customStatistics && typeof customStatistics === 'object') {
+      finalStatistics = _.union(customStatistics, finalStatistics);
+    }
+    if (statistics && typeof statistics === 'object') {
+      finalStatistics = _.union(statistics, finalStatistics);
+    }
+
+    CSSRuleChecker.statistics = _.uniq(finalStatistics, function(elem) { return elem.name });
+
     var stylesheets = document.styleSheets;
     var totalCount = 0;
     var totalAppliedCount = 0;
@@ -190,7 +195,7 @@
 
   function average(collection) {
     // selectorInRules
-    var totalParts = collection.reduce(function(previous, current) {
+    var totalParts = _.reduce(collection, function(previous, current) {
       return previous + current.parts.length;
     }, 0);
 
@@ -198,11 +203,11 @@
 
     // partsInSelector
     var partsCount = function(rule) {
-      return rule.parts.map(function(part) { return part.count; });
+      return _.pluck(rule.parts, 'count');
     };
 
-    var sum = collection.reduce(function(previousValue, currentValue) {
-      var currentValueSum = partsCount(currentValue).reduce(function(previous, current) {
+    var sum = _.reduce(collection, function(previousValue, currentValue) {
+      var currentValueSum = _.reduce(partsCount(currentValue), function(previous, current) {
         return previous + current;
       });
       return previousValue + currentValueSum;
@@ -222,8 +227,8 @@
       return part.count;
     };
     sortedCollection = collection.sort(function(a, b) {
-      var aPartsCount = a.parts.map(partsCount);
-      var bPartsCount = b.parts.map(partsCount);
+      var aPartsCount = _.pluck(a.parts, 'count');
+      var bPartsCount = _.pluck(b.parts, 'count');
       return Math.max.apply(this, bPartsCount) - Math.max.apply(this, aPartsCount);
     });
     maxPartsInSelector = sortedCollection[0];
@@ -235,31 +240,61 @@
       },
       partsInSelector: {
         rule: maxPartsInSelector,
-        count: Math.max.apply(this, maxPartsInSelector.parts.map(partsCount))
+        count: Math.max.apply(this, _.pluck(maxPartsInSelector.parts, 'count'))
       }
     };
   }
 
   var loadCSSExplain = function() {
+    var deferred = $.Deferred();
+
     if (!window.cssExplain) {
       var script = document.createElement('script');
       script.src = 'https://raw.github.com/josh/css-explain/master/css-explain.js';
-      script.onload = CSSRuleChecker.checkRules;
+      script.onload = function() {
+        deferred.resolve();
+      };
       document.body.appendChild(script);
     } else {
-      CSSRuleChecker.checkRules();
+      deferred.resolve();
     }
+
+    return deferred.promise();
+  };
+
+  var loadUnderscore = function() {
+    var deferred = $.Deferred();
+
+    if (!window._) {
+      var script = document.createElement('script');
+      script.src = 'https://raw.github.com/documentcloud/underscore/master/underscore-min.js';
+      script.onload = function() {
+        deferred.resolve();
+      };
+      document.body.appendChild(script);
+    } else {
+      deferred.resolve();
+    }
+
+    return deferred.promise();
+  };
+
+  var loadDependenciesAndRun = function() {
+    $.when(
+      loadUnderscore(),
+      loadCSSExplain()
+    ).then(CSSRuleChecker.checkRules);
   };
 
   // Load jQuery if it hasn't be previously loaded
   if (!window.jQuery) {
     var script = document.createElement( 'script' );
     script.src = '//ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js';
-    script.onload = loadCSSExplain;
+    script.onload = loadDependenciesAndRun();
     document.body.appendChild(script);
   }
   else {
-    loadCSSExplain();
+    loadDependenciesAndRun();
   }
 
 
