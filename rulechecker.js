@@ -245,29 +245,12 @@
     };
   }
 
-  var loadCSSExplain = function() {
-    var deferred = $.Deferred();
-
-    if (!window.cssExplain) {
-      var script = document.createElement('script');
-      script.src = 'https://raw.github.com/josh/css-explain/master/css-explain.js';
-      script.onload = function() {
-        deferred.resolve();
-      };
-      document.body.appendChild(script);
-    } else {
-      deferred.resolve();
-    }
-
-    return deferred.promise();
-  };
-
-  var loadUnderscore = function() {
+  var loadDependency = function(scriptSrc) {
     var deferred = $.Deferred();
 
     if (!window._) {
       var script = document.createElement('script');
-      script.src = 'https://raw.github.com/documentcloud/underscore/master/underscore-min.js';
+      script.src = scriptSrc;
       script.onload = function() {
         deferred.resolve();
       };
@@ -281,8 +264,8 @@
 
   var loadDependenciesAndRun = function() {
     $.when(
-      loadUnderscore(),
-      loadCSSExplain()
+      loadDependency('https://raw.github.com/documentcloud/underscore/master/underscore-min.js'),
+      loadDependency('https://raw.github.com/josh/css-explain/master/css-explain.js')
     ).then(CSSRuleChecker.checkRules);
   };
 
