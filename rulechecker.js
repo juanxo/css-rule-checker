@@ -265,7 +265,7 @@
   var loadDependenciesAndRun = function() {
 
     var dependenciesPromise = [
-      loadDependency(window._, 'https://raw.github.com/documentcloud/underscore/master/underscore-min.js'),
+      loadDependency(window._ && window._.VERSION > "1.4.4", 'https://raw.github.com/documentcloud/underscore/master/underscore-min.js'),
       loadDependency(window.cssExplain, 'https://raw.github.com/josh/css-explain/master/css-explain.js')
     ];
 
