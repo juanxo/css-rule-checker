@@ -10,7 +10,7 @@
     // Sort first to calculate median
     var selectorsInRuleCount = _.map(collection, function(rule) { return rule.parts.length; });
     var partsInSelectorCount = _.reduce(collection, function(previous, current) {
-      previous.push.apply(previous, _.pluck(current.parts, 'count');
+      previous.push.apply(previous, _.pluck(current.parts, 'count'));
       return previous;
     }, []);
     var sortedCollections = [];
@@ -245,10 +245,10 @@
     };
   }
 
-  var loadDependency = function(scriptSrc) {
+  var loadDependency = function(existenceCheck, scriptSrc) {
     var deferred = $.Deferred();
 
-    if (!window._) {
+    if (!existenceCheck) {
       var script = document.createElement('script');
       script.src = scriptSrc;
       script.onload = function() {
@@ -263,17 +263,26 @@
   };
 
   var loadDependenciesAndRun = function() {
-    $.when(
-      loadDependency('https://raw.github.com/documentcloud/underscore/master/underscore-min.js'),
-      loadDependency('https://raw.github.com/josh/css-explain/master/css-explain.js')
-    ).then(CSSRuleChecker.checkRules);
+
+    var dependenciesPromise = [
+      loadDependency(window._, 'https://raw.github.com/documentcloud/underscore/master/underscore-min.js'),
+      loadDependency(window.cssExplain, 'https://raw.github.com/josh/css-explain/master/css-explain.js')
+    ];
+
+    if (CSSRuleChecker.dependencies) {
+      for (var i = 0; i < CSSRuleChecker.dependencies.length; ++i) {
+        dependenciesPromise.push(loadDependency(null, CSSRuleChecker.dependencies[i]));
+      }
+    }
+
+    $.when.apply($, dependenciesPromise).then(CSSRuleChecker.checkRules);
   };
 
   // Load jQuery if it hasn't be previously loaded
   if (!window.jQuery) {
     var script = document.createElement( 'script' );
     script.src = '//ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js';
-    script.onload = loadDependenciesAndRun();
+    script.onload = loadDependenciesAndRun;
     document.body.appendChild(script);
   }
   else {
