@@ -3,86 +3,17 @@
   // Global var to allow customization and multiple runs
   CSSRuleChecker = window.CSSRuleChecker || {};
 
-  // percent is a number between 0 and 1
-  CSSRuleChecker.percentil = function(percent, collection) {
-    var result = [];
-    // First for selectorsInRule
-    // Sort first to calculate median
-    var selectorsInRuleCount = _.map(collection.rules, function(rule) {
-      return rule.partIndices.length;
-    });
-    var partsInSelectorCount = _.map(collection.parts, function(part) {
-      return part.count;
-    });
-    var sortedCollections = [];
-    sortedCollections.push(selectorsInRuleCount.sort(function(a,b) { return a - b; }));
-    sortedCollections.push(partsInSelectorCount.sort(function(a,b) { return a - b; }));
-    for (var i = 0; i < sortedCollections.length; ++i) {
-      var currentCollection = sortedCollections[i];
-      var point = currentCollection.length * percent;
-      var currentResult;
-      if ((point % 1) === 0) {
-        currentResult = (currentCollection[point - 1] + currentCollection[point]) / 2;
-      } else {
-        // Exact match, so just return this value
-        point = Math.floor(point);
-        currentResult = currentCollection[point];
-      }
-      result.push(currentResult);
-    }
-    return result;
-  };
-
-  function frequencies(collection) {
-    var selectorsInRule = [];
-    var partsInSelector = [];
-    var i;
-
-    for (i = 0; i < collection.rules.length; ++i) {
-      var index = collection.rules[i].partIndices.length;
-      if (selectorsInRule[index]) {
-        selectorsInRule[index] += 1;
-      } else {
-        selectorsInRule[index] = 1;
-      }
-    }
-
-    for (i = 0; i < collection.parts.length; ++i) {
-      var index = collection.parts[i].count;
-      if (partsInSelector[index]) {
-        partsInSelector[index] += 1;
-      } else {
-        partsInSelector[index] = 1;
-      }
-    }
-
-    return {
-      selectorsInRule: selectorsInRule,
-      partsInSelector: partsInSelector
-    };
-
-  }
 
   var percentil = CSSRuleChecker.percentil;
 
   CSSRuleChecker.checkRules = function(statistics) {
 
-    if (!CSSRuleChecker.defaultStatistics) {
-      CSSRuleChecker.defaultStatistics = [
-      {name: 'median', func: _.partial(percentil, 0.5)},
-      {name: '95th percentil', func: _.partial(percentil, 0.95)},
-      {name: 'average', func: average},
-      {name: 'max', func: max},
-      {name: 'frequencies', func: frequencies}
-      ];
-    };
-
     var finalStatistics = CSSRuleChecker.defaultStatistics;
     var customStatistics = CSSRuleChecker.customStatistics;
-    if (customStatistics && typeof customStatistics === 'object') {
+    if (_.isArray(customStatistics)) {
       finalStatistics = _.union(customStatistics, finalStatistics);
     }
-    if (statistics && typeof statistics === 'object') {
+    if (_.isArray(statistics)) {
       finalStatistics = _.union(statistics, finalStatistics);
     }
 
@@ -266,46 +197,6 @@
     console.log(statName, result);
   }
 
-  function average(collection) {
-    var totalSelectorsInRules, totalPartsInSelector;
-
-
-    totalSelectorsInRules = _.reduce(collection.rules, function(previous, current) {
-      return previous + current.partIndices.length;
-    }, 0);
-
-    totalPartsInSelector = _.reduce(collection.parts, function(previous, current) {
-      return previous + current.count;
-    }, 0);
-
-    return {
-      selectorInRules: totalSelectorsInRules / collection.rules.length,
-        partsInSelector: totalPartsInSelector / collection.parts.length
-    };
-  }
-
-  function max(collection) {
-    var maxSelectorsInRule = null, maxPartsInSelector = null;
-
-    maxSelectorsInRule = _.max(collection.rules, function(rule) {
-      return rule.partIndices.length;
-    });
-
-    maxPartsInSelector = _.max(collection.parts, function(part) {
-      return part.count;
-    });
-
-    return {
-      selectorInRule: {
-                        rule: maxSelectorsInRule.selector,
-                          count: maxSelectorsInRule.partIndices.length
-                      },
-        partsInSelector: {
-                           rule: maxPartsInSelector.selector,
-                           count: maxPartsInSelector.count
-                         }
-    };
-  }
 
   var loadDependency = function(existenceCheck, scriptSrc) {
     var deferred = $.Deferred();
@@ -328,8 +219,9 @@
 
     var dependenciesPromise = [
       loadDependency(window._ && window._.VERSION > "1.4.4", 'https://raw.github.com/documentcloud/underscore/master/underscore-min.js'),
-      loadDependency(window.cssExplain, 'https://raw.github.com/josh/css-explain/master/css-explain.js')
-        ];
+      loadDependency(window.cssExplain, 'https://raw.github.com/josh/css-explain/master/css-explain.js'),
+      loadDependency(null, 'https://raw.github.com/Juanxo/css-rule-checker/master/statistics.js')
+    ];
 
     if (CSSRuleChecker.dependencies) {
       for (var i = 0; i < CSSRuleChecker.dependencies.length; ++i) {
