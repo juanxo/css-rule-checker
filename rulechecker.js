@@ -9,7 +9,7 @@
     // First for selectorsInRule
     // Sort first to calculate median
     var selectorsInRuleCount = _.map(collection.rules, function(rule) {
-      return rule.partIndices.length; 
+      return rule.partIndices.length;
     });
     var partsInSelectorCount = _.map(collection.parts, function(part) {
       return part.count;
@@ -33,6 +33,36 @@
     return result;
   };
 
+  function frequencies(collection) {
+    var selectorsInRule = [];
+    var partsInSelector = [];
+    var i;
+
+    for (i = 0; i < collection.rules.length; ++i) {
+      var index = collection.rules[i].partIndices.length;
+      if (selectorsInRule[index]) {
+        selectorsInRule[index] += 1;
+      } else {
+        selectorsInRule[index] = 1;
+      }
+    }
+
+    for (i = 0; i < collection.parts.length; ++i) {
+      var index = collection.parts[i].count;
+      if (partsInSelector[index]) {
+        partsInSelector[index] += 1;
+      } else {
+        partsInSelector[index] = 1;
+      }
+    }
+
+    return {
+      selectorsInRule: selectorsInRule,
+      partsInSelector: partsInSelector
+    };
+
+  }
+
   var percentil = CSSRuleChecker.percentil;
 
   CSSRuleChecker.checkRules = function(statistics) {
@@ -42,7 +72,8 @@
       {name: 'median', func: _.partial(percentil, 0.5)},
       {name: '95th percentil', func: _.partial(percentil, 0.95)},
       {name: 'average', func: average},
-      {name: 'max', func: max}
+      {name: 'max', func: max},
+      {name: 'frequencies', func: frequencies}
       ];
     };
 
