@@ -127,10 +127,14 @@
           // - status selector. e.g: "selector:status"
           var cssRegex = /\s+|\s*?[>+]\s*|\[|\:?\:/;
           for (var i = 0; i < selectorsInRule.length; ++i) {
+
+            // Trim leading and traling whitespaces
+            var selector = selectorsInRule[i].replace(/^\s*([\S][\s\S]*[\S])\s*$/, '$1');
+
             // Remove first '.' cause it made difficult to parse rules right
-            var selectorParts = selectorsInRule[i].split('.').filter(notEmpty).join(' ').split(cssRegex);
+            var selectorParts = selector.split('.').filter(notEmpty).join(' ').split(cssRegex);
             var part = {
-              selector: selectorsInRule[i],
+              selector: selector,
               count: selectorParts.length,
               ruleIndex: result.rules.length,
             };
@@ -175,10 +179,8 @@
     // Remove all pseudo classes, as some sizzle versions
     // break on them
     var pseudoRegex = /([^:\s])\:[\w\-]+(?:\(.*\))?([.\s>+\[#,]*?)/gi;
-    var replacementFunction = function(match, g1, g2) {
-      return g1 + g2;
-    };
-    var cleanSelectorText = selector.replace(pseudoRegex, replacementFunction);
+
+    var cleanSelectorText = selector.replace(pseudoRegex, '$1$2');
     var matchedElements = jQuery(cleanSelectorText);
     return matchedElements.length;
   }
