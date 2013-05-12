@@ -55,9 +55,11 @@
     CSSRuleChecker.appliedCount = totalAppliedCount;
     CSSRuleChecker.rules = cssResults;
 
+    CSSRuleChecker.results = {};
     for (var j = 0; j < CSSRuleChecker.statistics.length; ++j) {
       var statistic = CSSRuleChecker.statistics[j];
-      CSSRuleChecker[statistic.name] = getStatistic(statistic.name, cssResults, statistic.func);
+      CSSRuleChecker.results[statistic.name] = statistic.func(cssResults);
+      console.log(statistic.name, CSSRuleChecker.results[statistic.name]);
     }
 
   };
@@ -89,7 +91,7 @@
       }
 
       if ( currentRule instanceof CSSImportRule ) {
-        var importResult = checkImportRule(currentRule);
+        var importResult = analyzeStylesheet(currentRule.styleSheet);
         appliedCount += importResult.appliedSelectorCount;
         totalCount += importResult.totalSelectorCount;
 
@@ -181,12 +183,6 @@
     return matchedElements.length;
   }
 
-  // Iterates over import rule, returning [appliedRuleCount, totalRuleCount] for that import.
-  function checkImportRule( importRule ) {
-    var stylesheet = importRule.styleSheet;
-    return analyzeStylesheet(stylesheet);
-  }
-
   function notEmpty(element) {
     return element !== '';
   }
@@ -196,7 +192,6 @@
     var result = algorithm(collection);
     console.log(statName, result);
   }
-
 
   var loadDependency = function(existenceCheck, scriptSrc) {
     var deferred = $.Deferred();
