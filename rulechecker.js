@@ -8,11 +8,12 @@
     var result = [];
     // First for selectorsInRule
     // Sort first to calculate median
-    var selectorsInRuleCount = _.map(collection, function(rule) { return rule.parts.length; });
-    var partsInSelectorCount = _.reduce(collection, function(previous, current) {
-      previous.push.apply(previous, _.pluck(current.parts, 'count'));
-      return previous;
-    }, []);
+    var selectorsInRuleCount = _.map(collection.rules, function(rule) {
+      return rule.partIndices.length; 
+    });
+    var partsInSelectorCount = _.map(collection.parts, function(part) {
+      return part.count;
+    });
     var sortedCollections = [];
     sortedCollections.push(selectorsInRuleCount.sort(function(a,b) { return a - b; }));
     sortedCollections.push(partsInSelectorCount.sort(function(a,b) { return a - b; }));
@@ -59,7 +60,10 @@
     var stylesheets = document.styleSheets;
     var totalCount = 0;
     var totalAppliedCount = 0;
-    var rules = [];
+    var cssResults = {
+      rules: [],
+      parts: []
+    };
 
     for ( var index = 0; stylesheets && index < stylesheets.length; ++index ){
       var currentStylesheet = stylesheets[index];
@@ -72,7 +76,11 @@
       if (result) {
         totalAppliedCount += result.appliedSelectorCount;
         totalCount += result.totalSelectorCount;
-        rules.push.apply(rules, result.rules);
+
+        updateIndices(result.rules, cssResults.rules.length, cssResults.parts.length);
+        cssResults.rules.push.apply(cssResults.rules, result.rules.rules);
+        cssResults.parts.push.apply(cssResults.parts, result.rules.parts);
+
         console.log(result);
       }
     }
@@ -83,11 +91,11 @@
 
     CSSRuleChecker.totalCount = totalCount;
     CSSRuleChecker.appliedCount = totalAppliedCount;
-    CSSRuleChecker.rules = rules;
+    CSSRuleChecker.rules = cssResults;
 
     for (var j = 0; j < CSSRuleChecker.statistics.length; ++j) {
       var statistic = CSSRuleChecker.statistics[j];
-      CSSRuleChecker[statistic.name] = getStatistic(statistic.name, rules, statistic.func);
+      CSSRuleChecker[statistic.name] = getStatistic(statistic.name, cssResults, statistic.func);
     }
 
   };
@@ -100,17 +108,14 @@
   function analyzeStylesheet(stylesheet) {
     var appliedCount = 0;
     var totalCount = 0;
-    var resultRules = [];
+    var result = {
+      rules: [],
+      parts: []
+    };
 
     if (!stylesheet) {
       return false;
     }
-    // Remove all pseudo classes, as some sizzle versions
-    // break on them
-    var pseudoRegex = /([^:])\:[\w\-]+(?:\(.*\))?([.\s>+\[#,]*?)/gi;
-    var replacementFunction = function(match, g1, g2) {
-      return g1 + g2;
-    };
 
     var rules = stylesheet.rules;
     for ( var j = 0; rules && j < rules.length; ++j ){
@@ -122,34 +127,34 @@
       }
 
       if ( currentRule instanceof CSSImportRule ) {
-        var result = checkImportRule(currentRule);
-        appliedCount += result.appliedSelectorCount;
-        totalCount += result.totalSelectorCount;
-        resultRules.push.apply(resultRules, result.rules);
+        var importResult = checkImportRule(currentRule);
+        appliedCount += importResult.appliedSelectorCount;
+        totalCount += importResult.totalSelectorCount;
 
+        updateIndices(importResult.rules, result.rules.length, result.parts.length);
+        result.rules.push.apply(result.rules, importResult.rules.rules);
+        result.parts.push.apply(result.parts, importResult.rules.parts);
       } else {
 
         totalCount += 1;
 
-        var rule = {}, selectorText;
-        rule.selectorText = selectorText = currentRule.selectorText;
+        var rule = {
+          selector: currentRule.selectorText,
+          partIndices: [],
+          applied: false,
+        };
 
-        var cleanSelectorText = selectorText.replace(pseudoRegex, replacementFunction);
-        var matchedElements = jQuery(cleanSelectorText);
+        var selectorAppliedCount = selectorAppliedTimes(rule.selector);
 
-        if ( matchedElements.length > 0 ){
+        if (selectorAppliedCount){
           appliedCount += 1;
-          //console.info(selectorText + " applies to " + matchedElements.length + " elements");
-        } else {
-          //console.warn(selectorText + " doesn't apply");
+          rule.applied = selectorAppliedCount;
         }
 
-        rule.applied = matchedElements.length ? matchedElements.length : false;
-
         // Analyze rule composition
-        if (selectorText !== void 0 && selectorText !== null) {
-          var selectorsInRule = selectorText.split(',');
-          rule.parts = [];
+        if (rule.selector !== void 0 && rule.selector !== null) {
+          var selectorsInRule = rule.selector.split(',');
+
           // This takes into account all possible ways to create a relationship between 2
           // selectors:
           // - spaces e.g: "parent children"
@@ -158,14 +163,20 @@
           // - status selector. e.g: "selector:status"
           var cssRegex = /\s+|\s*?[>+]\s*|\[|\:?\:/;
           for (var i = 0; i < selectorsInRule.length; ++i) {
-            var selector = selectorsInRule[i];
             // Remove first '.' cause it made difficult to parse rules right
-            var selectorParts = selector.split('.').filter(notEmpty).join(' ').split(cssRegex);
-            rule.parts.push({'selector': selector, count: selectorParts.length});
-          }
-        }
+            var selectorParts = selectorsInRule[i].split('.').filter(notEmpty).join(' ').split(cssRegex);
+            var part = {
+              selector: selectorsInRule[i],
+              count: selectorParts.length,
+              ruleIndex: result.rules.length,
+            };
 
-        resultRules.push(rule);
+            rule.partIndices.push(result.parts.length);
+            result.parts.push(part);
+          }
+
+          result.rules.push(rule);
+        }
 
       }
     }
@@ -173,8 +184,39 @@
     return {
       appliedSelectorCount: appliedCount,
       totalSelectorCount: totalCount,
-      rules: resultRules
+      rules: result
     };
+  }
+
+  function updateIndices(results, ruleCount, partCount) {
+    var currentRule,
+        currentPart,
+        i;
+
+    for (i = 0; i < results.rules.length; ++i) {
+      currentRule = results.rules[i];
+      currentRule.partIndices = currentRule.partIndices.map(function(index) {
+        return index + partCount;
+      });
+    }
+
+    for (i = 0; i < results.parts.length; ++i) {
+      currentPart = results.parts[i];
+      currentRule.ruleIndex += ruleCount;
+    }
+
+  }
+
+  function selectorAppliedTimes(selector) {
+    // Remove all pseudo classes, as some sizzle versions
+    // break on them
+    var pseudoRegex = /([^:\s])\:[\w\-]+(?:\(.*\))?([.\s>+\[#,]*?)/gi;
+    var replacementFunction = function(match, g1, g2) {
+      return g1 + g2;
+    };
+    var cleanSelectorText = selector.replace(pseudoRegex, replacementFunction);
+    var matchedElements = jQuery(cleanSelectorText);
+    return matchedElements.length;
   }
 
   // Iterates over import rule, returning [appliedRuleCount, totalRuleCount] for that import.
@@ -194,54 +236,43 @@
   }
 
   function average(collection) {
-    // selectorInRules
-    var totalParts = _.reduce(collection, function(previous, current) {
-      return previous + current.parts.length;
+    var totalSelectorsInRules, totalPartsInSelector;
+
+
+    totalSelectorsInRules = _.reduce(collection.rules, function(previous, current) {
+      return previous + current.partIndices.length;
     }, 0);
 
-    var avgSelectorInRules = totalParts / collection.length;
+    totalPartsInSelector = _.reduce(collection.parts, function(previous, current) {
+      return previous + current.count;
+    }, 0);
 
-    // partsInSelector
-    var partsCount = function(rule) {
-      return _.pluck(rule.parts, 'count');
+    return {
+      selectorInRules: totalSelectorsInRules / collection.rules.length,
+        partsInSelector: totalPartsInSelector / collection.parts.length
     };
-
-    var sum = _.reduce(collection, function(previousValue, currentValue) {
-      var currentValueSum = _.reduce(partsCount(currentValue), function(previous, current) {
-        return previous + current;
-      });
-      return previousValue + currentValueSum;
-    }, 0);
-
-    var avgPartsInSelector = sum / totalParts;
-
-    return [avgSelectorInRules, avgPartsInSelector];
   }
 
   function max(collection) {
     var maxSelectorsInRule = null, maxPartsInSelector = null;
 
-    var sortedCollection = collection.sort(function(a,b) { return b.parts.length - a.parts.length; });
-    maxSelectorsInRule = sortedCollection[0];
-    var partsCount = function(part) {
-      return part.count;
-    };
-    sortedCollection = collection.sort(function(a, b) {
-      var aPartsCount = _.pluck(a.parts, 'count');
-      var bPartsCount = _.pluck(b.parts, 'count');
-      return Math.max.apply(this, bPartsCount) - Math.max.apply(this, aPartsCount);
+    maxSelectorsInRule = _.max(collection.rules, function(rule) {
+      return rule.partIndices.length;
     });
-    maxPartsInSelector = sortedCollection[0];
+
+    maxPartsInSelector = _.max(collection.parts, function(part) {
+      return part.count;
+    });
 
     return {
       selectorInRule: {
-        rule: maxSelectorsInRule,
-        count: maxSelectorsInRule.parts.length
-      },
-      partsInSelector: {
-        rule: maxPartsInSelector,
-        count: Math.max.apply(this, _.pluck(maxPartsInSelector.parts, 'count'))
-      }
+                        rule: maxSelectorsInRule.selector,
+                          count: maxSelectorsInRule.partIndices.length
+                      },
+        partsInSelector: {
+                           rule: maxPartsInSelector.selector,
+                           count: maxPartsInSelector.count
+                         }
     };
   }
 
@@ -267,7 +298,7 @@
     var dependenciesPromise = [
       loadDependency(window._ && window._.VERSION > "1.4.4", 'https://raw.github.com/documentcloud/underscore/master/underscore-min.js'),
       loadDependency(window.cssExplain, 'https://raw.github.com/josh/css-explain/master/css-explain.js')
-    ];
+        ];
 
     if (CSSRuleChecker.dependencies) {
       for (var i = 0; i < CSSRuleChecker.dependencies.length; ++i) {
